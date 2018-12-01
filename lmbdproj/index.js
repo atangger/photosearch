@@ -28,7 +28,7 @@ function rekognizeLabels(bucket, key) {
   return rekognition.detectLabels(params).promise()
 };
 
-function toElasticsearch(tagObj,callback){
+function toElasticsearch(bucket,key,tagObj,callback){
     request('https://search-testdomain-b7bncpjmvybaj2mt2e54cltxam.us-east-1.es.amazonaws.com/wtf/_search', 
     function (error, response, body) {
   if (!error && response.statusCode == 200) {
@@ -36,6 +36,8 @@ function toElasticsearch(tagObj,callback){
     var url="https://search-testdomain-b7bncpjmvybaj2mt2e54cltxam.us-east-1.es.amazonaws.com/wtf/_doc/" +JSON.parse(body).hits.total+1;
     var requestDat = new Object();
     requestDat.tags = new Array();
+    requestDat.key = key;
+    requestDat.bucket = bucket;
     for(var i = 0; i < tagObj.length; i ++){
         requestDat.tags.push(tagObj[i].Name);
     }
@@ -83,7 +85,7 @@ exports.handler = function(event, context, callback) {
     rekognizeLabels(srcBucket, srcKey)
         .then(function(data) {
           console.log(data["Labels"]);
-          toElasticsearch(data["Labels"],callback);
+          toElasticsearch(srcBucket,srcKey,data["Labels"],callback);
         })
         .catch(function(err) {
             callback(err, null);
@@ -93,75 +95,4 @@ exports.handler = function(event, context, callback) {
         callback("Source and destination buckets are the same.");
         return;
     }
-
-    // // Infer the image type.
-    // var typeMatch = srcKey.match(/\.([^.]*)$/);
-    // if (!typeMatch) {
-    //     callback("Could not determine the image type.");
-    //     return;
-    // }
-    // var imageType = typeMatch[1];
-    // if (imageType != "jpg" && imageType != "png") {
-    //     callback('Unsupported image type: ${imageType}');
-    //     return;
-    // }
-
-    // // Download the image from S3, transform, and upload to a different S3 bucket.
-    // async.waterfall([
-    //     function download(next) {
-    //         // Download the image from S3 into a buffer.
-    //         s3.getObject({
-    //                 Bucket: srcBucket,
-    //                 Key: srcKey
-    //             },
-    //             next);
-    //         },
-    //     function transform(response, next) {
-    //         gm(response.Body).size(function(err, size) {
-    //             // Infer the scaling factor to avoid stretching the image unnaturally.
-    //             var scalingFactor = Math.min(
-    //                 MAX_WIDTH / size.width,
-    //                 MAX_HEIGHT / size.height
-    //             );
-    //             var width  = scalingFactor * size.width;
-    //             var height = scalingFactor * size.height;
-
-    //             // Transform the image buffer in memory.
-    //             this.resize(width, height)
-    //                 .toBuffer(imageType, function(err, buffer) {
-    //                     if (err) {
-    //                         next(err);
-    //                     } else {
-    //                         next(null, response.ContentType, buffer);
-    //                     }
-    //                 });
-    //         });
-    //     },
-    //     function upload(contentType, data, next) {
-    //         // Stream the transformed image to a different S3 bucket.
-    //         s3.putObject({
-    //                 Bucket: dstBucket,
-    //                 Key: dstKey,
-    //                 Body: data,
-    //                 ContentType: contentType
-    //             },
-    //             next);
-    //         }
-    //     ], function (err) {
-    //         if (err) {
-    //             console.error(
-    //                 'Unable to resize ' + srcBucket + '/' + srcKey +
-    //                 ' and upload to ' + dstBucket + '/' + dstKey +
-    //                 ' due to an error: ' + err
-    //             );
-    //         } else {
-    //             console.log(
-    //                 'Successfully resized ' + srcBucket + '/' + srcKey +
-    //                 ' and uploaded to ' + dstBucket + '/' + dstKey
-    //             );
-    //         }
-
-    //         callback(null, "message");
-    //     }
-    // );
 };
