@@ -35,9 +35,12 @@ function toElasticsearch(bucket,key,tagObj,callback){
     console.log("HIT total = " + JSON.parse(body).hits.total);
     var url="https://search-testdomain-b7bncpjmvybaj2mt2e54cltxam.us-east-1.es.amazonaws.com/wtf/_doc/" +JSON.parse(body).hits.total+1;
     var requestDat = new Object();
+    var d = new Date();
+    
     requestDat.tags = new Array();
     requestDat.key = key;
     requestDat.bucket = bucket;
+    requestDat.timestamp = d.toDateString();
     for(var i = 0; i < tagObj.length; i ++){
         requestDat.tags.push(tagObj[i].Name);
     }
